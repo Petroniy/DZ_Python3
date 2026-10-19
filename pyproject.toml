@@ -1,0 +1,41 @@
+[project]
+name = "finalproject-pavlov-m26-555"
+version = "0.1.0"
+description = "Учебный валютный кошелек"
+readme = "README.md"
+authors = [{ name = "Pyotr Pavlov", email = "pavlov_pete.05@mail.ru" }]
+requires-python = ">=3.12"
+dependencies = ["prettytable>=3.18.0", "requests>=2.32.0"]
+
+[project.scripts]
+project = "valutatrade_hub.cli.interface:main"
+
+[dependency-groups]
+dev = ["ruff==0.17.2"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["valutatrade_hub"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+exclude = ["venv", ".venv", "dist", "__pycache__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = []
+
+[tool.valutatrade]
+data_dir = "data"
+rates_ttl_seconds = 300
+base_currency = "USD"
+logs_dir = "logs"
+log_format = "json"
+log_level = "INFO"
+log_max_bytes = 1000000
+log_backup_count = 3
+update_interval_seconds = 300
