@@ -165,7 +165,7 @@ class Portfolio:
 
     @property
     def wallets(self):
-        return self._wallets
+        return self._wallets.copy()
 
     def add_currency(self, currency_code):
         normalized = get_currency(currency_code).code
