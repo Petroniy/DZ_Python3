@@ -116,7 +116,7 @@ class Wallet:
 
     def withdraw(self, amount):
         amount = validate_number(amount, positive=True)
-        if amount >= self.balance:
+        if amount > self.balance:
             raise InsufficientFundsError(self.balance, amount, self.currency_code)
         self.balance = self.balance - amount
 
