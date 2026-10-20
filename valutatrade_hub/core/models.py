@@ -122,3 +122,82 @@ class Wallet:
 
     def get_balance_info(self):
         return f"{self.currency_code}: {self.balance:.4f}"
+
+
+class Portfolio:
+    def __init__(self, user_id, wallets=None, user=None):
+        if isinstance(user_id, User):
+            user = user_id
+            user_id = user.user_id
+        if user is None:
+            from valutatrade_hub.infra.database import DatabaseManager
+
+            stored = next(
+                (
+                    item
+                    for item in DatabaseManager().load_users()
+                    if item["user_id"] == user_id
+                ),
+                None,
+            )
+            if stored is None:
+                raise ValueError(f"Пользователь с id={user_id} не найден")
+            user = User(**stored)
+        if not isinstance(user, User) or user.user_id != user_id:
+            raise ValueError("Пользователь не соответствует портфелю")
+        self._user_id = user_id
+        self._user = user
+        self._wallets = {}
+        for code, value in (wallets or {}).items():
+            normalized = get_currency(code).code
+            if normalized in self._wallets:
+                raise ValueError(f"Кошелёк '{normalized}' уже существует")
+            if isinstance(value, Wallet):
+                if value.currency_code != normalized:
+                    raise ValueError("Код кошелька не соответствует ключу")
+                self._wallets[normalized] = value
+            else:
+                self._wallets[normalized] = Wallet(normalized, value["balance"])
+
+    @property
+    def user(self):
+        return self._user
+
+    @property
+    def wallets(self):
+        return self._wallets
+
+    def add_currency(self, currency_code):
+        normalized = get_currency(currency_code).code
+        if normalized in self._wallets:
+            raise ValueError(f"Кошелёк '{normalized}' уже существует")
+        self._wallets[normalized] = Wallet(normalized)
+        return self._wallets[normalized]
+
+    def get_wallet(self, currency_code):
+        normalized = get_currency(currency_code).code
+        if normalized not in self._wallets:
+            raise ValueError(
+                f"У вас нет кошелька '{normalized}'. Добавьте валюту: "
+                "она создаётся автоматически при первой покупке."
+            )
+        return self._wallets[normalized]
+
+    def get_total_value(self, base_currency="USD"):
+        from valutatrade_hub.core.usecases import get_rate
+
+        base = get_currency(base_currency).code
+        total = 0.0
+        for code, wallet in self._wallets.items():
+            if wallet.balance:
+                total += wallet.balance * get_rate(code, base)["rate"]
+        return validate_number(total)
+
+    def to_dict(self):
+        return {
+            "user_id": self._user_id,
+            "wallets": {
+                code: {"balance": wallet.balance}
+                for code, wallet in self._wallets.items()
+            },
+        }
