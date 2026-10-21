@@ -1,3 +1,4 @@
+import math
 import os
 import tomllib
 from pathlib import Path
@@ -57,7 +58,7 @@ class SettingsLoader:
             value = values[key]
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise ValueError(f"Настройка {key} должна быть числом")
-            if value <= 0:
+            if not math.isfinite(value) or value <= 0:
                 raise ValueError(f"Настройка {key} должна быть положительной")
         self._values = values
 
