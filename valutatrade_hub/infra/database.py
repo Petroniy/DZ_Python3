@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from threading import RLock
@@ -46,9 +48,25 @@ class DatabaseManager:
         path = self._path(key)
         with self._lock:
             path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("w", encoding="utf-8") as file:
-                json.dump(value, file, ensure_ascii=False, indent=2, allow_nan=False)
-                file.write("\n")
+            temporary = None
+            try:
+                with tempfile.NamedTemporaryFile(
+                    mode="w",
+                    encoding="utf-8",
+                    dir=path.parent,
+                    prefix=path.name + ".",
+                    suffix=".tmp",
+                    delete=False,
+                ) as file:
+                    temporary = Path(file.name)
+                    json.dump(
+                        value, file, ensure_ascii=False, indent=2, allow_nan=False
+                    )
+                    file.write("\n")
+                os.replace(temporary, path)
+            finally:
+                if temporary is not None:
+                    temporary.unlink(missing_ok=True)
 
     def load_users(self):
         """Читает список пользователей."""
