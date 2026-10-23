@@ -148,7 +148,7 @@ class ExchangeRateApiClient(BaseApiClient):
                 raise ApiRequestError(f"ExchangeRate-API: отсутствует курс {code}")
             conversion = positive_rate(conversions[code])
             pair = f"{code}_{config.BASE_CURRENCY}"
-            rates[pair] = positive_rate(conversion)
+            rates[pair] = positive_rate(1 / conversion)
             pair_metadata[pair] = {**metadata, "raw_id": code}
         self.last_metadata = pair_metadata
         self.fetched_at = utc_now()
