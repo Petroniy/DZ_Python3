@@ -115,3 +115,41 @@ class CoinGeckoClient(BaseApiClient):
         self.last_metadata = pair_metadata
         self.fetched_at = utc_now()
         return rates
+
+
+class ExchangeRateApiClient(BaseApiClient):
+    """Получает курсы фиатных валют."""
+
+    source = "ExchangeRate-API"
+
+    def fetch_rates(self) -> dict:
+        """Переводит котировки базовой валюты в курсы к базе."""
+        config = self.config
+        if not config.EXCHANGERATE_API_KEY:
+            raise ApiRequestError(
+                "ExchangeRate-API: задайте переменную EXCHANGERATE_API_KEY"
+            )
+        url = (
+            f"{config.EXCHANGERATE_API_URL}/{config.EXCHANGERATE_API_KEY}"
+            f"/latest/{config.BASE_CURRENCY}"
+        )
+        payload, metadata = self._request_json(url)
+        if payload.get("result") != "success":
+            raise ApiRequestError("ExchangeRate-API: запрос отклонён сервисом")
+        if payload.get("base_code", config.BASE_CURRENCY) != config.BASE_CURRENCY:
+            raise ApiRequestError("ExchangeRate-API: неверная базовая валюта")
+        conversions = payload.get("conversion_rates", payload.get("rates"))
+        if not isinstance(conversions, dict):
+            raise ApiRequestError("ExchangeRate-API: отсутствуют курсы валют")
+        rates = {}
+        pair_metadata = {}
+        for code in config.FIAT_CURRENCIES:
+            if code not in conversions:
+                raise ApiRequestError(f"ExchangeRate-API: отсутствует курс {code}")
+            conversion = positive_rate(conversions[code])
+            pair = f"{code}_{config.BASE_CURRENCY}"
+            rates[pair] = positive_rate(conversion)
+            pair_metadata[pair] = {**metadata, "raw_id": code}
+        self.last_metadata = pair_metadata
+        self.fetched_at = utc_now()
+        return rates
