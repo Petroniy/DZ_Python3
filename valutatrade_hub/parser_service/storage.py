@@ -94,16 +94,23 @@ class RatesStorage:
             if last_refresh is not None:
                 timestamp_value(last_refresh)
             current = dict(cached_pairs)
+            identifiers = {record["id"] for record in history}
             new_history = list(history)
             updated = 0
             for pair, rate, record in validated:
-                new_history.append(record)
-                current[pair] = {
-                    "rate": rate,
-                    "updated_at": timestamp,
-                    "source": source,
-                }
-                updated += 1
+                if record["id"] not in identifiers:
+                    new_history.append(record)
+                    identifiers.add(record["id"])
+                previous = current.get(pair)
+                if previous is None or measured_at > timestamp_value(
+                    previous["updated_at"]
+                ):
+                    current[pair] = {
+                        "rate": rate,
+                        "updated_at": timestamp,
+                        "source": source,
+                    }
+                    updated += 1
             if new_history != history:
                 self.database.save_history(new_history)
             if updated:
