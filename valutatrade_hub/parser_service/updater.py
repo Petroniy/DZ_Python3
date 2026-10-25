@@ -60,7 +60,9 @@ class RatesUpdater:
                 )
             except (ApiRequestError, ValueError, OSError) as error:
                 message = str(error)
-                raise ApiRequestError(message)
+                errors.append(message)
+                self.logger.error("Не удалось обновить %s: %s", name, message)
+                continue
             successful += 1
             updated += count
             if last_refresh is None or timestamp_value(fetched_at) > timestamp_value(
